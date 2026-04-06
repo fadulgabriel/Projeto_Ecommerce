@@ -12,26 +12,48 @@ format:
     number-sections: true
     toc-expand: false
     smooth-scroll: true
-    code-fold: true
-    code-summary: "Ver Código Fonte (R)"
     self-contained: true
+    fig-width: 9
+    fig-height: 6
+    fig-responsive: true
 execute:
+  echo: false
   warning: false
   message: false
 lang: pt
 ---
 
-# Sumário Executivo
+# Introdução e Objetivos
 
-Este projeto analisa a base pública de dados da **Olist**, o maior ecossistema de e-commerce do Brasil, com o objetivo de mapear como a eficiência logística impacta diretamente a retenção e a satisfação do cliente.
+Este relatório apresenta uma análise detalhada da base de dados pública da **Olist**, o maior ecossistema de *e-commerce* do Brasil. O objetivo central deste estudo é mapear a eficiência logística e investigar como o desempenho das entregas atua como um determinante direto na retenção e na satisfação do consumidor final. Em um país com dimensões continentais e desafios complexos, a logística deixa de ser apenas um suporte operacional para se tornar o principal motor de experiência do cliente.
 
-**Principais Descobertas:** 1. Atrasos na entrega possuem uma **correlação negativa estatisticamente comprovada** com a satisfação do consumidor. 2. O engajamento via comentários segue uma curva em "U", onde o **ódio engaja mais que o amor**: clientes insatisfeitos fazem questão de justificar sua dor em texto muito mais do que clientes encantados.
+A investigação inicia-se pela análise da "dor do cliente", buscando quantificar o impacto dos atrasos logísticos na satisfação do consumidor. Nesse contexto, explorou-se o comportamento de engajamento dos usuários através de três pilares: os comentários nas avaliações, o status de entrega e atrasos e as avaliações gerais.
+
+Adicionalmente, o estudo aprofunda-se nas disparidades geográficas brasileiras, analisando como a localização do consumidor e a proporção do custo do frete no valor total do pedido influenciam a percepção de valor e a viabilidade da compra.
+
+Por fim, utilizando metodologias de análise exploratória e modelagem estatística, este trabalho foca na recorrência e no risco de *churn*. O intuito é compreender o intervalo entre compras e o peso que uma experiência de entrega positiva exerce na probabilidade de fidelização.
 
 ------------------------------------------------------------------------
 
-# Preparação dos Dados
+# Preparação de Dados
 
-Para garantir o rigor analítico, a base de dados passou por um rigoroso processo de limpeza. Tratamos o efeito de *Cart Splitting* (pedidos com múltiplos itens gerando duplicação de frete) agrupando os dados por `order_id`.
+A base de dados utilizada neste projeto é proveniente do ecossistema público da **Olist**, disponível via Kaggle. Para garantir a integridade das análises estatísticas, toda a etapa de ETL e tratamento de dados foi desenvolvida em linguagem **R**, utilizando o ecossistema *Tidyverse* (principalmente os pacotes `dplyr`, `tidyr` e `vroom` para leitura eficiente de grandes volumes).
+
+## Agrupamento de Itens 
+
+Durante a fase de exploração, foi identificado uma característica estrutural que poderia enviesar significativamente os resultados de satisfação e logística: a base original estava segmentada por item de pedido, e não por pedido único. 
+
+Isso significa que, se um cliente comprasse cinco itens em uma única transação ("carrinho"), o banco de dados gerava cinco linhas distintas. Como os indicadores de atraso, nota de avaliação e comentários são atribuídos ao pedido como um todo, o cálculo geraria um viés, superestimando o peso de pedidos com múltiplos itens.
+
+::: {#fig-agrupamento}
+![](Agrupamento de Itens para Pedidos.png)
+
+Exemplo de redundância estrutural onde um único pedido gera múltiplas entradas, duplicando métricas de satisfação e atraso.
+:::
+
+Para mitigar esse viés, os dados foram agrupados por ID único de cliente e data de compra, consolidando os valores financeiros e mantendo a unicidade dos indicadores qualitativos. 
+
+Esta metodologia permitiu que cada experiência de compra fosse contabilizada como uma unidade estatística única, garantindo que as análise reflitam a realidade da jornada do consumidor, independentemente da quantidade de produtos adquiridos em uma mesma transação.
 
 ```{r}
 #| label: setup-dados
@@ -92,7 +114,7 @@ data_limpo <- data_completo %>%
 
 ------------------------------------------------------------------------
 
-# A Dor do Cliente: Análise de Atrasos e Avaliações
+# Análise de Atrasos e Avaliações
 
 Nesta seção, exploramos a distribuição do tempo de entrega e como o consumidor reage a quebras de expectativa logística. Utilizamos abas para separar a visão da logística operacional e a reação do consumidor.
 
@@ -102,9 +124,11 @@ Nesta seção, exploramos a distribuição do tempo de entrega e como o consumid
 A maior parte da operação da Olist flui de forma adiantada, demonstrando folga nas estimativas de frete. Contudo, quando a falha ocorre, a distribuição dos dias de atraso se revela severa e com forte assimetria à direita.
 
 ```{r}
-#| label: plots-logistica
 #| layout-ncol: 2
-#| fig-height: 5
+#| fig-width: 12
+#| fig-height: 8
+#| out-width: "100%"
+#| fig-dpi: 300
 
 # 1. Gráfico de Status
 cores_status <- c("Adiantado" = "#1A9850", "Prazo Exato" = "#377EB8", "Atrasado" = "#D73027")
